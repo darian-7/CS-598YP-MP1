@@ -184,13 +184,10 @@ class GroupBySumOla(OLA):
         grouped_slice = df_slice.groupby(self.groupby_col)[self.sum_col].sum()
 
         # Update the running sums
-        for group, group_sum in grouped_slice.iteritems():
+        for group, group_sum in grouped_slice.items():  # Use .items() for Series
             if group not in self.group_sums:
                 self.group_sums[group] = 0
             self.group_sums[group] += group_sum
-
-        # Since we are dealing with sums, we don't need to adjust the estimates based on the slice size
-        # as we would with means. However, if the original data was sampled, we would need to scale up the sums.
 
         # Convert dictionary to lists and sort by group for consistency
         sorted_groups = sorted(self.group_sums.keys())
@@ -198,6 +195,7 @@ class GroupBySumOla(OLA):
 
         # Update the plot with the new estimated group sums
         self.update_widget(sorted_groups, sorted_sums)
+
 
 
         # Update the plot
