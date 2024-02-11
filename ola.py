@@ -94,20 +94,12 @@ class FilterAvgOla(OLA):
         self.filtered_sum += filtered_slice.sum()[self.mean_col]
         self.filtered_count += filtered_slice.count()[self.mean_col]
 
-        # Calculate the new estimated mean
-        # if self.filtered_count > 0:
-        #     estimated_mean = self.filtered_sum / self.filtered_count
-        # else:
-        #     # If there are no filtered rows yet, set the estimated mean to 0
-        #     estimated_mean = 0
-
         estimated_mean = self.filtered_sum / self.filtered_count if self.filtered_count else 0
 
         # Update the plot with the new estimated mean
         # Ensure the x-axis key is a tuple containing an empty string, and the y-axis value is a tuple with the estimated mean
         self.update_widget([""], [estimated_mean])
         
-
         # Update the plot. The filtered mean should be put into a singleton list due to Plotly semantics.
         # hint: self.update_widget([""], *estimated filtered mean of mean_col*)
 
@@ -136,11 +128,11 @@ class GroupByAvgOla(OLA):
         # Implement me!
 
         # Group by the specified column and aggregate the sums and counts
-        groupby_slice = df_slice.groupby(self.groupby_col)[self.mean_col].agg(['sum', 'count'])
+        grouped_slice = df_slice.groupby(self.groupby_col)[self.mean_col].agg(['sum', 'count'])
 
         # Update the running sums and counts
-        for group, data in groupby_slice.iterrows():
-            # If the group is not yet in the dictionary, initialize it
+        for group, data in grouped_slice.iterrows():
+            # Initialize if group not in dictionary
             if group not in self.group_sums:
                 self.group_sums[group] = 0
                 self.group_counts[group] = 0
@@ -150,18 +142,18 @@ class GroupByAvgOla(OLA):
             self.group_counts[group] += data['count']
 
         # Calculate the new estimated means for each group
-        estimated_means = {
+        estimated_mean = {
             group: self.group_sums[group] / self.group_counts[group]
             if self.group_counts[group] > 0 else 0
             for group in self.group_sums
         }
 
         # Convert dictionary to lists and sort by group for consistency
-        sorted_groups = sorted(estimated_means.keys())
-        sorted_means = [estimated_means[group] for group in sorted_groups]
+        list_of_groups = sorted(estimated_mean.keys())
+        list_of_estimated_group_means = [estimated_mean[group] for group in list_of_groups]
 
         # Update the plot with the new estimated group means
-        self.update_widget(sorted_groups, sorted_means)
+        self.update_widget(list_of_groups, list_of_estimated_group_means)
 
         # hint: self.update_widget(*list of groups*, *list of estimated group means of mean_col*)
 
@@ -169,26 +161,44 @@ class GroupByAvgOla(OLA):
 class GroupBySumOla(OLA):
     def __init__(self, widget: go.FigureWidget, original_df_num_rows: int, groupby_col: str, sum_col: str):
         """
-            Class for performing OLA by incrementally computing the estimated grouped sums of *sum_col*
-            with *groupby_col* as groups.
+        Class for performing OLA by incrementally computing the estimated grouped sums of *sum_col*
+        with *groupby_col* as groups.
 
-            @param original_df_num_rows: number of rows in the original dataframe before sampling and slicing.
-            @param groupby_col: grouping column, i.e., df.groupby(groupby_col).
-            @param sum_col: column to compute grouped sums for.
+        @param original_df_num_rows: number of rows in the original dataframe before sampling and slicing.
+        @param groupby_col: grouping column, i.e., df.groupby(groupby_col).
+        @param sum_col: column to compute grouped sums for.
         """
         super().__init__(widget)
         self.original_df_num_rows = original_df_num_rows
         self.groupby_col = groupby_col
         self.sum_col = sum_col
 
-        # Put any other bookkeeping class variables you need here...
+        # Initialize bookkeeping variables
+        self.group_sums = {}
 
     def process_slice(self, df_slice: pd.DataFrame) -> None:
         """
-            Update the running grouped sums with a dataframe slice.
+        Update the running grouped sums with a dataframe slice.
         """
-        # Implement me!
-        pass
+        # Group by the specified column and sum the values
+        grouped_slice = df_slice.groupby(self.groupby_col)[self.sum_col].sum()
+
+        # Update the running sums
+        for group, group_sum in grouped_slice.iteritems():
+            if group not in self.group_sums:
+                self.group_sums[group] = 0
+            self.group_sums[group] += group_sum
+
+        # Since we are dealing with sums, we don't need to adjust the estimates based on the slice size
+        # as we would with means. However, if the original data was sampled, we would need to scale up the sums.
+
+        # Convert dictionary to lists and sort by group for consistency
+        sorted_groups = sorted(self.group_sums.keys())
+        sorted_sums = [self.group_sums[group] for group in sorted_groups]
+
+        # Update the plot with the new estimated group sums
+        self.update_widget(sorted_groups, sorted_sums)
+
 
         # Update the plot
         # hint: self.update_widget(*list of groups*, *list of estimated grouped sums of sum_col*)
