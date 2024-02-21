@@ -196,61 +196,61 @@ class GroupBySumOla(OLA):
         # hint: self.update_widget(*list of groups*, *list of estimated grouped sums of sum_col*)
 
 
-# class GroupByCountOla(OLA):
-#     def __init__(self, widget: go.FigureWidget, original_df_num_rows: int, groupby_col: str, count_col: str):
-#         """
-#             Class for performing OLA by incrementally computing the estimated grouped non-null counts in *count_col*
-#             with *groupby_col* as groups.
+class GroupByCountOla(OLA):
+    def __init__(self, widget: go.FigureWidget, original_df_num_rows: int, groupby_col: str, count_col: str):
+        """
+            Class for performing OLA by incrementally computing the estimated grouped non-null counts in *count_col*
+            with *groupby_col* as groups.
 
-#             @param original_df_num_rows: number of rows in the original dataframe before sampling and slicing.
-#             @param groupby_col: grouping column, i.e., df.groupby(groupby_col).
-#             @param count_col: counting column.
-#         """
-#         super().__init__(widget)
-#         self.original_df_num_rows = original_df_num_rows
-#         self.groupby_col = groupby_col
-#         self.count_col = count_col
+            @param original_df_num_rows: number of rows in the original dataframe before sampling and slicing.
+            @param groupby_col: grouping column, i.e., df.groupby(groupby_col).
+            @param count_col: counting column.
+        """
+        super().__init__(widget)
+        self.original_df_num_rows = original_df_num_rows
+        self.groupby_col = groupby_col
+        self.count_col = count_col
 
-#         # Put any other bookkeeping class variables you need here...
+        # Put any other bookkeeping class variables you need here...
 
-#     def process_slice(self, df_slice: pd.DataFrame) -> None:
-#         """
-#             Update the running grouped counts with a dataframe slice.
-#         """
-#         # Implement me!
-#         pass
+    def process_slice(self, df_slice: pd.DataFrame) -> None:
+        """
+            Update the running grouped counts with a dataframe slice.
+        """
+        # Implement me!
+        pass
 
-#         # Update the plot
-#         # hint: self.update_widget(*list of groups*, *list of estimated group counts of count_col*)
+        # Update the plot
+        # hint: self.update_widget(*list of groups*, *list of estimated group counts of count_col*)
 
 
-# class FilterDistinctOla(OLA):
-#     def __init__(self, widget: go.FigureWidget, filter_col: str, filter_value: Any, distinct_col: str):
-#         """
-#             Class for performing OLA by incrementally computing the estimated cardinality (distinct elements) *distinct_col*
-#             where *filter_col* is equal to *filter_value*.
+class FilterDistinctOla(OLA):
+    def __init__(self, widget: go.FigureWidget, filter_col: str, filter_value: Any, distinct_col: str):
+        """
+            Class for performing OLA by incrementally computing the estimated cardinality (distinct elements) *distinct_col*
+            where *filter_col* is equal to *filter_value*.
 
-#             @param filter_col: column to filter on.
-#             @param filter_value: value to filter for, i.e., df[df[filter_col] == filter_value].
-#             @param distinct_col: column to compute cardinality for.
-#         """
-#         super().__init__(widget)
-#         self.filter_col = filter_col
-#         self.filter_value = filter_value
-#         self.distinct_col = distinct_col
+            @param filter_col: column to filter on.
+            @param filter_value: value to filter for, i.e., df[df[filter_col] == filter_value].
+            @param distinct_col: column to compute cardinality for.
+        """
+        super().__init__(widget)
+        self.filter_col = filter_col
+        self.filter_value = filter_value
+        self.distinct_col = distinct_col
 
-#         # HLL for estimating cardinality. Don't modify the parameters; the autograder relies on it.
-#         # IMPORTANT: Please convert your data to the String type before adding to the HLL, i.e., self.hll.add(str(data))
-#         self.hll = HyperLogLog(p=2, seed=123456789)
+        # HLL for estimating cardinality. Don't modify the parameters; the autograder relies on it.
+        # IMPORTANT: Please convert your data to the String type before adding to the HLL, i.e., self.hll.add(str(data))
+        self.hll = HyperLogLog(p=2, seed=123456789)
 
-#         # Put any other bookkeeping class variables you need here...
+        # Put any other bookkeeping class variables you need here...
 
-#     def process_slice(self, df_slice: pd.DataFrame) -> None:
-#         """
-#             Update the running filtered cardinality with a dataframe slice.
-#         """
-#         # Implement me!
-#         pass
+    def process_slice(self, df_slice: pd.DataFrame) -> None:
+        """
+            Update the running filtered cardinality with a dataframe slice.
+        """
+        # Implement me!
+        pass
 
-#         # Update the plot. The filtered cardinality should be put into a singleton list due to Plotly semantics.
-#         # hint: self.update_widget([""], *estimated filtered cardinality of distinct_col*)
+        # Update the plot. The filtered cardinality should be put into a singleton list due to Plotly semantics.
+        # hint: self.update_widget([""], *estimated filtered cardinality of distinct_col*)
