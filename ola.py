@@ -196,38 +196,40 @@ class GroupBySumOla(OLA):
         # Update the plot
         # hint: self.update_widget(*list of groups*, *list of estimated grouped sums of sum_col*)
 
-
 class GroupByCountOla(OLA):
     def __init__(self, widget: go.FigureWidget, original_df_num_rows: int, groupby_col: str, count_col: str):
         super().__init__(widget)
         self.original_df_num_rows = original_df_num_rows
         self.groupby_col = groupby_col
         self.count_col = count_col
-        # Initialize bookkeeping variable to keep track of counts for each group
         self.group_counts = {}
-        self.total_processed_rows = 0 
+        self.total_processed_rows = 0
 
     def process_slice(self, df_slice: pd.DataFrame) -> None:
-
+        # Increment the count of total processed rows with the size of the current slice
         self.total_processed_rows += len(df_slice)
 
+        # Calculate the scaling factor based on total processed rows to adjust for sampling
+        scaling_factor = self.original_df_num_rows / self.total_processed_rows
+
+        # Compute the counts for each group in the current slice
         group_counts_slice = df_slice.groupby(self.groupby_col)[self.count_col].count()
 
-        # Update the running counts for each group
+        # Update the running counts for each group, applying the scaling factor immediately
         for group, count in group_counts_slice.items():
             if group not in self.group_counts:
                 self.group_counts[group] = 0
-            # Update counts with scaling based on the size of the slice vs. the original dataframe
-            scaling_factor = self.original_df_num_rows / self.total_processed_rows
-            self.group_counts[group] += count 
+            # Apply scaling factor here
+            self.group_counts[group] += count * scaling_factor
 
+        # Sort the groups and their counts for plotting
         sorted_groups = sorted(self.group_counts.keys())
+        # Apply scaling factor is not needed here anymore since it's applied above
         sorted_counts = [self.group_counts[group] for group in sorted_groups]
 
-        self.update_widget(sorted_groups, sorted_counts * scaling_factor)
+        # Update the plot with the new estimated counts
+        self.update_widget(sorted_groups, sorted_counts)
 
-        # Update the plot
-        # hint: self.update_widget(*list of groups*, *list of estimated group counts of count_col*)
 
 
 class FilterDistinctOla(OLA):
