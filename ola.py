@@ -160,38 +160,39 @@ class GroupByAvgOla(OLA):
 
 class GroupBySumOla(OLA):
     def __init__(self, widget: go.FigureWidget, original_df_num_rows: int, groupby_col: str, sum_col: str):
+        """
+        Class for performing OLA by incrementally computing the estimated grouped sums of *sum_col*
+        with *groupby_col* as groups.
+
+        @param original_df_num_rows: number of rows in the original dataframe before sampling and slicing.
+        @param groupby_col: grouping column, i.e., df.groupby(groupby_col).
+        @param sum_col: column to compute grouped sums for.
+        """
         super().__init__(widget)
         self.original_df_num_rows = original_df_num_rows
         self.groupby_col = groupby_col
         self.sum_col = sum_col
         self.group_sums = {}
-        self.total_processed_rows = 0  # Keep track of the total number of processed rows
+        self.total_processed_rows = 0 
 
     def process_slice(self, df_slice: pd.DataFrame) -> None:
-        # Increment the count of processed rows
+
         self.total_processed_rows += len(df_slice)
         
-        # Group by the specified column and sum the values
         grouped_slice = df_slice.groupby(self.groupby_col)[self.sum_col].sum()
 
-        # Update the running sums
         for group, group_sum in grouped_slice.items():
             self.group_sums[group] = self.group_sums.get(group, 0) + group_sum
 
-        # Calculate the scaling factor based on the proportion of processed rows
         scaling_factor = self.original_df_num_rows / self.total_processed_rows
 
-        # Apply the scaling factor to the running sums
         scaled_sums = {group: sum_value * scaling_factor for group, sum_value in self.group_sums.items()}
 
-        # Convert dictionary to lists and sort by group for consistency
         sorted_groups = sorted(scaled_sums.keys())
         sorted_sums = [scaled_sums[group] for group in sorted_groups]
 
-        # Update the plot with the new estimated group sums
         self.update_widget(sorted_groups, sorted_sums)
-
-
+        
         # Update the plot
         # hint: self.update_widget(*list of groups*, *list of estimated grouped sums of sum_col*)
 
@@ -199,26 +200,45 @@ class GroupBySumOla(OLA):
 class GroupByCountOla(OLA):
     def __init__(self, widget: go.FigureWidget, original_df_num_rows: int, groupby_col: str, count_col: str):
         """
-            Class for performing OLA by incrementally computing the estimated grouped non-null counts in *count_col*
-            with *groupby_col* as groups.
+        Class for performing OLA by incrementally computing the estimated grouped non-null counts in *count_col*
+        with *groupby_col* as groups.
 
-            @param original_df_num_rows: number of rows in the original dataframe before sampling and slicing.
-            @param groupby_col: grouping column, i.e., df.groupby(groupby_col).
-            @param count_col: counting column.
+        @param original_df_num_rows: number of rows in the original dataframe before sampling and slicing.
+        @param groupby_col: grouping column, i.e., df.groupby(groupby_col).
+        @param count_col: counting column.
         """
         super().__init__(widget)
         self.original_df_num_rows = original_df_num_rows
         self.groupby_col = groupby_col
         self.count_col = count_col
 
-        # Put any other bookkeeping class variables you need here...
+        # Initialize bookkeeping variables
+        self.group_counts = {}
 
     def process_slice(self, df_slice: pd.DataFrame) -> None:
         """
-            Update the running grouped counts with a dataframe slice.
+        Update the running grouped counts with a dataframe slice.
         """
-        # Implement me!
-        pass
+        # Filter out rows where count_col is null
+        df_slice_filtered = df_slice[df_slice[self.count_col].notnull()]
+
+        # Count non-null values for each group
+        group_counts_slice = df_slice_filtered.groupby(self.groupby_col).size()
+
+        # Update the running counts
+        for group, count in group_counts_slice.iteritems():
+            if group not in self.group_counts:
+                self.group_counts[group] = 0
+            self.group_counts[group] += count
+
+        # No scaling factor is applied here since we're counting occurrences, not summing values
+
+        # Convert dictionary to lists and sort by group for consistency
+        sorted_groups = sorted(self.group_counts.keys())
+        sorted_counts = [self.group_counts[group] for group in sorted_groups]
+
+        # Update the plot with the new estimated group counts
+        self.update_widget(sorted_groups, sorted_counts)
 
         # Update the plot
         # hint: self.update_widget(*list of groups*, *list of estimated group counts of count_col*)
