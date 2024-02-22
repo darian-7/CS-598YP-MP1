@@ -158,6 +158,45 @@ class GroupByAvgOla(OLA):
         # hint: self.update_widget(*list of groups*, *list of estimated group means of mean_col*)
 
 
+class GroupBySumOla(OLA):
+    def __init__(self, widget: go.FigureWidget, original_df_num_rows: int, groupby_col: str, sum_col: str):
+        """
+        Class for performing OLA by incrementally computing the estimated grouped sums of *sum_col*
+        with *groupby_col* as groups.
+
+        @param original_df_num_rows: number of rows in the original dataframe before sampling and slicing.
+        @param groupby_col: grouping column, i.e., df.groupby(groupby_col).
+        @param sum_col: column to compute grouped sums for.
+        """
+        super().__init__(widget)
+        self.original_df_num_rows = original_df_num_rows
+        self.groupby_col = groupby_col
+        self.sum_col = sum_col
+        self.group_sums = {}
+        self.total_processed_rows = 0 
+
+    def process_slice(self, df_slice: pd.DataFrame) -> None:
+
+        self.total_processed_rows += len(df_slice)
+        
+        grouped_slice = df_slice.groupby(self.groupby_col)[self.sum_col].sum()
+
+        for group, group_sum in grouped_slice.items():
+            self.group_sums[group] = self.group_sums.get(group, 0) + group_sum
+
+        scaling_factor = self.original_df_num_rows / self.total_processed_rows
+
+        scaled_sums = {group: sum_value * scaling_factor for group, sum_value in self.group_sums.items()}
+
+        sorted_groups = sorted(scaled_sums.keys())
+        sorted_sums = [scaled_sums[group] for group in sorted_groups]
+
+        self.update_widget(sorted_groups, sorted_sums)
+        
+        # Update the plot
+        # hint: self.update_widget(*list of groups*, *list of estimated grouped sums of sum_col*)
+
+
 class GroupByCountOla(OLA):
     def __init__(self, widget: go.FigureWidget, original_df_num_rows: int, groupby_col: str, count_col: str):
         """
@@ -185,7 +224,7 @@ class GroupByCountOla(OLA):
         group_counts_slice = df_slice.groupby(self.groupby_col).size()
 
         # Update the running counts for each group
-        for group, count in group_counts_slice.items():
+        for group, count in group_counts_slice.items(): 
             if group not in self.group_counts:
                 self.group_counts[group] = 0
             self.group_counts[group] += count
@@ -197,8 +236,6 @@ class GroupByCountOla(OLA):
 
         # Update the plot with the new estimated counts
         self.update_widget(sorted_groups, sorted_counts)
-
-
 
         # Update the plot
         # hint: self.update_widget(*list of groups*, *list of estimated group counts of count_col*)
