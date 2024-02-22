@@ -1,7 +1,7 @@
 import pickle
 
 # group_by_sum_val_list
-file_path = r'/Users/darian/Desktop/UIUC/ML & Data Systems/CS598-MP1-OLA/expected_results/group_by_sum_val_list.pkl'
+file_path = r'/Users/darian/Desktop/UIUC/ML & Data Systems/CS598-MP1-OLA/expected_results/group_by_count_val_list.pkl'
 
 with open(file_path, 'rb') as file:
     data = pickle.load(file)
