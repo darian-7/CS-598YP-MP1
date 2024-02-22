@@ -199,43 +199,32 @@ class GroupBySumOla(OLA):
 
 class GroupByCountOla(OLA):
     def __init__(self, widget: go.FigureWidget, original_df_num_rows: int, groupby_col: str, count_col: str):
-        """
-        Class for performing OLA by incrementally computing the estimated grouped non-null counts in *count_col*
-        with *groupby_col* as groups.
-
-        @param original_df_num_rows: number of rows in the original dataframe before sampling and slicing.
-        @param groupby_col: grouping column, i.e., df.groupby(groupby_col).
-        @param count_col: counting column.
-        """
         super().__init__(widget)
         self.original_df_num_rows = original_df_num_rows
         self.groupby_col = groupby_col
         self.count_col = count_col
-
         # Initialize bookkeeping variable to keep track of counts for each group
         self.group_counts = {}
 
     def process_slice(self, df_slice: pd.DataFrame) -> None:
-        """
-        Update the running grouped counts with a dataframe slice.
-        """
-        # Group by the specified column and count non-null occurrences in count_col
-        # Use size to count rows since we're interested in non-null counts of count_col
-        group_counts_slice = df_slice.groupby(self.groupby_col).size()
+        # Group by the specified column and count occurrences
+        group_counts_slice = df_slice.groupby(self.groupby_col)[self.count_col].count()
 
         # Update the running counts for each group
-        for group, count in group_counts_slice.items(): 
+        for group, count in group_counts_slice.items():
             if group not in self.group_counts:
                 self.group_counts[group] = 0
-            self.group_counts[group] += count
+            # Update counts with scaling based on the size of the slice vs. the original dataframe
+            scaling_factor = self.original_df_num_rows / len(df_slice)
+            self.group_counts[group] += count * scaling_factor
 
-        # Convert dictionary to lists for plotting
-        # Sorting by group for consistency in visualization
+        # Convert dictionary to lists for plotting, sorting by group for consistency
         sorted_groups = sorted(self.group_counts.keys())
         sorted_counts = [self.group_counts[group] for group in sorted_groups]
 
         # Update the plot with the new estimated counts
         self.update_widget(sorted_groups, sorted_counts)
+
 
         # Update the plot
         # hint: self.update_widget(*list of groups*, *list of estimated group counts of count_col*)
