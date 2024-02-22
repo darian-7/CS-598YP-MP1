@@ -205,9 +205,12 @@ class GroupByCountOla(OLA):
         self.count_col = count_col
         # Initialize bookkeeping variable to keep track of counts for each group
         self.group_counts = {}
+        self.total_processed_rows = 0 
 
     def process_slice(self, df_slice: pd.DataFrame) -> None:
-        # Group by the specified column and count occurrences
+
+        self.total_processed_rows += len(df_slice)
+
         group_counts_slice = df_slice.groupby(self.groupby_col)[self.count_col].count()
 
         # Update the running counts for each group
@@ -215,16 +218,13 @@ class GroupByCountOla(OLA):
             if group not in self.group_counts:
                 self.group_counts[group] = 0
             # Update counts with scaling based on the size of the slice vs. the original dataframe
-            scaling_factor = self.original_df_num_rows / len(df_slice)
-            self.group_counts[group] += count * scaling_factor
+            scaling_factor = self.original_df_num_rows / self.total_processed_rows
+            self.group_counts[group] += count 
 
-        # Convert dictionary to lists for plotting, sorting by group for consistency
         sorted_groups = sorted(self.group_counts.keys())
         sorted_counts = [self.group_counts[group] for group in sorted_groups]
 
-        # Update the plot with the new estimated counts
-        self.update_widget(sorted_groups, sorted_counts)
-
+        self.update_widget(sorted_groups, sorted_counts * scaling_factor)
 
         # Update the plot
         # hint: self.update_widget(*list of groups*, *list of estimated group counts of count_col*)
