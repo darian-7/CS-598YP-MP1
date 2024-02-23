@@ -197,78 +197,71 @@ class GroupBySumOla(OLA):
         # Update the plot
         # hint: self.update_widget(*list of groups*, *list of estimated grouped sums of sum_col*)
 
-# class GroupByCountOla(OLA):
-#     def __init__(self, widget: go.FigureWidget, original_df_num_rows: int, groupby_col: str, count_col: str):
-#         super().__init__(widget)
-#         self.original_df_num_rows = original_df_num_rows
-#         self.groupby_col = groupby_col
-#         self.count_col = count_col
-#         self.group_counts = {}
-#         self.total_processed_rows = 0
-
-#     def process_slice(self, df_slice: pd.DataFrame) -> None:
-#         # Increment the count of total processed rows with the size of the current slice
-#         self.total_processed_rows += len(df_slice)
-
-#         # Calculate the scaling factor based on total processed rows to adjust for sampling
-#         scaling_factor = self.original_df_num_rows / self.total_processed_rows
-
-#         # Compute the counts for each group in the current slice
-#         group_counts_slice = df_slice.groupby(self.groupby_col)[self.count_col].count()
-
-#         # Update the running counts for each group, applying the scaling factor immediately
-#         for group, count in group_counts_slice.items():
-#             if group not in self.group_counts:
-#                 self.group_counts[group] = 0
-#             # Apply scaling factor here
-#             self.group_counts[group] += count * scaling_factor
-
-#         # Sort the groups and their counts for plotting
-#         sorted_groups = sorted(self.group_counts.keys())
-
-#         sorted_counts = [self.group_counts[group] for group in sorted_groups]
-
-#         # Update the plot with the new estimated counts
-#         self.update_widget(sorted_groups, sorted_counts)
-
 class GroupByCountOla(OLA):
-    def __init__(self, widget: go.FigureWidget, original_df_num_rows: int, groupby_col: str):
+    def __init__(self, widget: go.FigureWidget, original_df_num_rows: int, groupby_col: str, count_col: str):
         super().__init__(widget)
         self.original_df_num_rows = original_df_num_rows
         self.groupby_col = groupby_col
-        # Initialize class variables for bookkeeping
+        self.count_col = count_col
         self.group_counts = {}
         self.total_processed_rows = 0
 
     def process_slice(self, df_slice: pd.DataFrame) -> None:
-        # Update the total number of processed rows
         self.total_processed_rows += len(df_slice)
+        group_counts_slice = df_slice.groupby(self.groupby_col)[self.count_col].count()
 
-        # Aggregate counts for the current slice
-        current_slice_counts = df_slice.groupby(self.groupby_col).size()
+        for group, count in group_counts_slice.iteritems():
+            if group not in self.group_counts:
+                self.group_counts[group] = 0
+            self.group_counts[group] += count
 
-        # Update cumulative counts
-        for group, count in current_slice_counts.iteritems():
-            if group not in self.cumulative_counts:
-                self.cumulative_counts[group] = count
-            else:
-                self.cumulative_counts[group] += count
+        scaling_factor = self.original_df_num_rows / self.total_processed_rows
+        scaled_counts = {group: count * scaling_factor for group, count in self.group_counts.items()}
 
-        # Calculate the estimated total count for each group based on the proportion of data processed
-        estimated_counts = {group: (count / self.total_processed_rows) * self.original_df_num_rows 
-                            for group, count in self.cumulative_counts.items()}
+        sorted_groups = sorted(scaled_counts.keys())
+        sorted_counts = [scaled_counts[group] for group in sorted_groups]
 
-        # Prepare data for plotting
-        groups = list(estimated_counts.keys())
-        counts = [estimated_counts[group] for group in groups]
-
-        # Sort the groups and counts for consistent plotting
-        sorted_indices = np.argsort(groups)
-        sorted_groups = np.array(groups)[sorted_indices]
-        sorted_counts = np.array(counts)[sorted_indices]
-
-        # Update the widget with the new estimates
         self.update_widget(sorted_groups, sorted_counts)
+
+
+# class GroupByCountOla(OLA):
+#     def __init__(self, widget: go.FigureWidget, original_df_num_rows: int, groupby_col: str):
+#         super().__init__(widget)
+#         self.original_df_num_rows = original_df_num_rows
+#         self.groupby_col = groupby_col
+#         # Initialize class variables for bookkeeping
+#         self.group_counts = {}
+#         self.total_processed_rows = 0
+
+#     def process_slice(self, df_slice: pd.DataFrame) -> None:
+#         # Update the total number of processed rows
+#         self.total_processed_rows += len(df_slice)
+
+#         # Aggregate counts for the current slice
+#         current_slice_counts = df_slice.groupby(self.groupby_col).size()
+
+#         # Update cumulative counts
+#         for group, count in current_slice_counts.iteritems():
+#             if group not in self.cumulative_counts:
+#                 self.cumulative_counts[group] = count
+#             else:
+#                 self.cumulative_counts[group] += count
+
+#         # Calculate the estimated total count for each group based on the proportion of data processed
+#         estimated_counts = {group: (count / self.total_processed_rows) * self.original_df_num_rows 
+#                             for group, count in self.cumulative_counts.items()}
+
+#         # Prepare data for plotting
+#         groups = list(estimated_counts.keys())
+#         counts = [estimated_counts[group] for group in groups]
+
+#         # Sort the groups and counts for consistent plotting
+#         sorted_indices = np.argsort(groups)
+#         sorted_groups = np.array(groups)[sorted_indices]
+#         sorted_counts = np.array(counts)[sorted_indices]
+
+#         # Update the widget with the new estimates
+#         self.update_widget(sorted_groups, sorted_counts)
 
 
 
@@ -289,7 +282,6 @@ class FilterDistinctOla(OLA):
         self.filter_value = filter_value
         self.distinct_col = distinct_col
 
-        # HLL for estimating cardinality. Don't modify the parameters; the autograder relies on it.
         self.hll = HyperLogLog(p=2, seed=123456789)
 
     def process_slice(self, df_slice: pd.DataFrame) -> None:
@@ -301,12 +293,10 @@ class FilterDistinctOla(OLA):
         
         # Iterate over the distinct_col in the filtered slice, convert each value to string, and add to HLL
         for value in filtered_slice[self.distinct_col].unique():
-            self.hll.add(str(value))  # Convert to string as required
+            self.hll.add(str(value))
 
-        # Estimate the cardinality
         estimated_cardinality = self.hll.cardinality()
 
-        # Update the plot with the new estimated cardinality
         self.update_widget([""], [estimated_cardinality])
 
         # The self.update_widget call above assumes that the widget is designed to display a single value.
