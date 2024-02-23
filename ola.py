@@ -236,9 +236,8 @@ class GroupByCountOla(OLA):
         super().__init__(widget)
         self.original_df_num_rows = original_df_num_rows
         self.groupby_col = groupby_col
-        # Initialize a dictionary to store the cumulative count for each group
-        self.cumulative_counts = {}
-        # Keep track of the total number of rows processed so far
+        # Initialize class variables for bookkeeping
+        self.group_counts = {}
         self.total_processed_rows = 0
 
     def process_slice(self, df_slice: pd.DataFrame) -> None:
