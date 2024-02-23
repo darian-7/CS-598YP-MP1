@@ -304,7 +304,7 @@ class FilterDistinctOla(OLA):
             self.hll.add(str(value))  # Convert to string as required
 
         # Estimate the cardinality
-        estimated_cardinality = self.hll.count()
+        estimated_cardinality = self.hll.cardinality()
 
         # Update the plot with the new estimated cardinality
         self.update_widget([""], [estimated_cardinality])
