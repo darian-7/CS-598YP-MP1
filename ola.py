@@ -277,12 +277,12 @@ class GroupByCountOla(OLA):
 class FilterDistinctOla(OLA):
     def __init__(self, widget: go.FigureWidget, filter_col: str, filter_value: Any, distinct_col: str):
         """
-            Class for performing OLA by incrementally computing the estimated cardinality (distinct elements) *distinct_col*
-            where *filter_col* is equal to *filter_value*.
+        Class for performing OLA by incrementally computing the estimated cardinality (distinct elements) *distinct_col*
+        where *filter_col* is equal to *filter_value*.
 
-            @param filter_col: column to filter on.
-            @param filter_value: value to filter for, i.e., df[df[filter_col] == filter_value].
-            @param distinct_col: column to compute cardinality for.
+        @param filter_col: column to filter on.
+        @param filter_value: value to filter for, i.e., df[df[filter_col] == filter_value].
+        @param distinct_col: column to compute cardinality for.
         """
         super().__init__(widget)
         self.filter_col = filter_col
@@ -290,17 +290,29 @@ class FilterDistinctOla(OLA):
         self.distinct_col = distinct_col
 
         # HLL for estimating cardinality. Don't modify the parameters; the autograder relies on it.
-        # IMPORTANT: Please convert your data to the String type before adding to the HLL, i.e., self.hll.add(str(data))
         self.hll = HyperLogLog(p=2, seed=123456789)
-
-        # Put any other bookkeeping class variables you need here...
 
     def process_slice(self, df_slice: pd.DataFrame) -> None:
         """
-            Update the running filtered cardinality with a dataframe slice.
+        Update the running filtered cardinality with a dataframe slice.
         """
-        # Implement me!
-        pass
+        # Filter the slice based on filter_col and filter_value
+        filtered_slice = df_slice[df_slice[self.filter_col] == self.filter_value]
+        
+        # Iterate over the distinct_col in the filtered slice, convert each value to string, and add to HLL
+        for value in filtered_slice[self.distinct_col].unique():
+            self.hll.add(str(value))  # Convert to string as required
+
+        # Estimate the cardinality
+        estimated_cardinality = self.hll.count()
+
+        # Update the plot with the new estimated cardinality
+        self.update_widget([""], [estimated_cardinality])
+
+        # The self.update_widget call above assumes that the widget is designed to display a single value.
+        # The [""] is a placeholder for the x-axis (which doesn't apply here since we're just showing a single value),
+        # and the [estimated_cardinality] is the y-axis value, showing the estimated number of distinct elements.
+
 
         # Update the plot. The filtered cardinality should be put into a singleton list due to Plotly semantics.
         # hint: self.update_widget([""], *estimated filtered cardinality of distinct_col*)
