@@ -88,18 +88,15 @@ class FilterAvgOla(OLA):
         """
         # Implement me!
         
-        # Filter the dataframe slice
         filtered_slice = df_slice[df_slice[self.filter_col] == self.filter_value]
 
         # Update the sum and count for filtered values
         self.filtered_sum += filtered_slice.sum()[self.mean_col]
         self.filtered_count += filtered_slice.count()[self.mean_col]
 
-        estimated_mean = self.filtered_sum / self.filtered_count if self.filtered_count else 0
+        est_mean = self.filtered_sum / self.filtered_count if self.filtered_count else 0
 
-        # Update the plot with the new estimated mean
-        # Ensure the x-axis key is a tuple containing an empty string, and the y-axis value is a tuple with the estimated mean
-        self.update_widget([""], [estimated_mean])
+        self.update_widget([""], [est_mean])
         
         # Update the plot. The filtered mean should be put into a singleton list due to Plotly semantics.
         # hint: self.update_widget([""], *estimated filtered mean of mean_col*)
@@ -129,10 +126,10 @@ class GroupByAvgOla(OLA):
         # Implement me!
 
         # Group by the specified column and aggregate the sums and counts
-        grouped_slice = df_slice.groupby(self.groupby_col)[self.mean_col].agg(['sum', 'count'])
+        group_slice = df_slice.groupby(self.groupby_col)[self.mean_col].agg(['sum', 'count'])
 
         # Update the running sums and counts
-        for group, data in grouped_slice.iterrows():
+        for group, data in group_slice.iterrows():
             # Initialize if group not in dictionary
             if group not in self.group_sums:
                 self.group_sums[group] = 0
@@ -143,17 +140,15 @@ class GroupByAvgOla(OLA):
             self.group_counts[group] += data['count']
 
         # Calculate the new estimated means for each group
-        estimated_mean = {
+        est_mean = {
             group: self.group_sums[group] / self.group_counts[group]
             if self.group_counts[group] > 0 else 0
             for group in self.group_sums
         }
 
-        # Convert dictionary to lists and sort by group for consistency
-        list_of_groups = sorted(estimated_mean.keys())
-        list_of_estimated_group_means = [estimated_mean[group] for group in list_of_groups]
+        list_of_groups = sorted(est_mean.keys())
+        list_of_estimated_group_means = [est_mean[group] for group in list_of_groups]
 
-        # Update the plot with the new estimated group means
         self.update_widget(list_of_groups, list_of_estimated_group_means)
 
         # hint: self.update_widget(*list of groups*, *list of estimated group means of mean_col*)
@@ -177,17 +172,19 @@ class GroupBySumOla(OLA):
         self.total_processed_rows = 0 
 
     def process_slice(self, df_slice: pd.DataFrame) -> None:
-
+        """
+            Update the running filtered mean with a dataframe slice.
+        """
         self.total_processed_rows += len(df_slice)
         
-        grouped_slice = df_slice.groupby(self.groupby_col)[self.sum_col].sum()
+        group_slice = df_slice.groupby(self.groupby_col)[self.sum_col].sum()
 
-        for group, group_sum in grouped_slice.items():
+        for group, group_sum in group_slice.items():
             self.group_sums[group] = self.group_sums.get(group, 0) + group_sum
 
-        scaling_factor = self.original_df_num_rows / self.total_processed_rows
+        scale_factor = self.original_df_num_rows / self.total_processed_rows
 
-        scaled_sums = {group: sum_value * scaling_factor for group, sum_value in self.group_sums.items()}
+        scaled_sums = {group: sum_value * scale_factor for group, sum_value in self.group_sums.items()}
 
         sorted_groups = sorted(scaled_sums.keys())
         sorted_sums = [scaled_sums[group] for group in sorted_groups]
@@ -207,6 +204,9 @@ class GroupByCountOla(OLA):
         self.total_processed_rows = 0
 
     def process_slice(self, df_slice: pd.DataFrame) -> None:
+        """
+            Update the running filtered mean with a dataframe slice.
+        """
         self.total_processed_rows += len(df_slice)
         group_counts_slice = df_slice.groupby(self.groupby_col)[self.count_col].count()
 
@@ -215,55 +215,13 @@ class GroupByCountOla(OLA):
                 self.group_counts[group] = 0
             self.group_counts[group] += count
 
-        scaling_factor = self.original_df_num_rows / self.total_processed_rows
-        scaled_counts = {group: count * scaling_factor for group, count in self.group_counts.items()}
+        scale_factor = self.original_df_num_rows / self.total_processed_rows
+        scaled_counts = {group: count * scale_factor for group, count in self.group_counts.items()}
 
         sorted_groups = sorted(scaled_counts.keys())
         sorted_counts = [scaled_counts[group] for group in sorted_groups]
 
         self.update_widget(sorted_groups, sorted_counts)
-
-
-# class GroupByCountOla(OLA):
-#     def __init__(self, widget: go.FigureWidget, original_df_num_rows: int, groupby_col: str):
-#         super().__init__(widget)
-#         self.original_df_num_rows = original_df_num_rows
-#         self.groupby_col = groupby_col
-#         # Initialize class variables for bookkeeping
-#         self.group_counts = {}
-#         self.total_processed_rows = 0
-
-#     def process_slice(self, df_slice: pd.DataFrame) -> None:
-#         # Update the total number of processed rows
-#         self.total_processed_rows += len(df_slice)
-
-#         # Aggregate counts for the current slice
-#         current_slice_counts = df_slice.groupby(self.groupby_col).size()
-
-#         # Update cumulative counts
-#         for group, count in current_slice_counts.iteritems():
-#             if group not in self.cumulative_counts:
-#                 self.cumulative_counts[group] = count
-#             else:
-#                 self.cumulative_counts[group] += count
-
-#         # Calculate the estimated total count for each group based on the proportion of data processed
-#         estimated_counts = {group: (count / self.total_processed_rows) * self.original_df_num_rows 
-#                             for group, count in self.cumulative_counts.items()}
-
-#         # Prepare data for plotting
-#         groups = list(estimated_counts.keys())
-#         counts = [estimated_counts[group] for group in groups]
-
-#         # Sort the groups and counts for consistent plotting
-#         sorted_indices = np.argsort(groups)
-#         sorted_groups = np.array(groups)[sorted_indices]
-#         sorted_counts = np.array(counts)[sorted_indices]
-
-#         # Update the widget with the new estimates
-#         self.update_widget(sorted_groups, sorted_counts)
-
-
 
 
 
@@ -289,20 +247,19 @@ class FilterDistinctOla(OLA):
         Update the running filtered cardinality with a dataframe slice.
         """
         # Filter the slice based on filter_col and filter_value
-        filtered_slice = df_slice[df_slice[self.filter_col] == self.filter_value]
+        filter_slice = df_slice[df_slice[self.filter_col] == self.filter_value]
         
         # Iterate over the distinct_col in the filtered slice, convert each value to string, and add to HLL
-        for value in filtered_slice[self.distinct_col].unique():
+        for value in filter_slice[self.distinct_col].unique():
             self.hll.add(str(value))
 
-        estimated_cardinality = self.hll.cardinality()
+        est_cardinality = self.hll.cardinality()
 
-        self.update_widget([""], [estimated_cardinality])
+        self.update_widget([""], [est_cardinality])
 
         # The self.update_widget call above assumes that the widget is designed to display a single value.
         # The [""] is a placeholder for the x-axis (which doesn't apply here since we're just showing a single value),
         # and the [estimated_cardinality] is the y-axis value, showing the estimated number of distinct elements.
-
 
         # Update the plot. The filtered cardinality should be put into a singleton list due to Plotly semantics.
         # hint: self.update_widget([""], *estimated filtered cardinality of distinct_col*)
