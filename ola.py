@@ -201,7 +201,7 @@ class GroupByCountOla(OLA):
         super().__init__(widget)
         self.original_df_num_rows = original_df_num_rows
         self.groupby_col = groupby_col
-        self.count_col = count_col
+        self.count_col = count_col  # This might be unnecessary if you're just counting rows, but kept for consistency
         self.group_counts = {}
         self.total_processed_rows = 0
 
@@ -209,26 +209,29 @@ class GroupByCountOla(OLA):
         # Increment the count of total processed rows with the size of the current slice
         self.total_processed_rows += len(df_slice)
 
+        # Compute the counts for each group in the current slice using agg
+        # Here, instead of directly using .count(), we use .agg() with 'size' to count rows
+        # Note: 'size' works similarly to 'count' but includes NaN values as well, which matches .count() behavior in groupby
+        group_counts_slice = df_slice.groupby(self.groupby_col).agg({'size'}).rename(columns={'size': 'count'})
+
         # Calculate the scaling factor based on total processed rows to adjust for sampling
         scaling_factor = self.original_df_num_rows / self.total_processed_rows
 
-        # Compute the counts for each group in the current slice
-        group_counts_slice = df_slice.groupby(self.groupby_col)[self.count_col].count()
-
         # Update the running counts for each group, applying the scaling factor immediately
-        for group, count in group_counts_slice.items():
+        for group, data in group_counts_slice.iterrows():
+            # Using 'count' as we've renamed the aggregation result to 'count'
+            count = data['count']
             if group not in self.group_counts:
                 self.group_counts[group] = 0
-            # Apply scaling factor here
             self.group_counts[group] += count * scaling_factor
 
         # Sort the groups and their counts for plotting
         sorted_groups = sorted(self.group_counts.keys())
-        # Apply scaling factor is not needed here anymore since it's applied above
         sorted_counts = [self.group_counts[group] for group in sorted_groups]
 
         # Update the plot with the new estimated counts
         self.update_widget(sorted_groups, sorted_counts)
+
 
 
 
