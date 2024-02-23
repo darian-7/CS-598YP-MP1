@@ -210,7 +210,7 @@ class GroupByCountOla(OLA):
         self.total_processed_rows += len(df_slice)
         group_counts_slice = df_slice.groupby(self.groupby_col)[self.count_col].count()
 
-        for group, count in group_counts_slice.iteritems():
+        for group, count in group_counts_slice.items():
             if group not in self.group_counts:
                 self.group_counts[group] = 0
             self.group_counts[group] += count
